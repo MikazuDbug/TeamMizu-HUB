@@ -24,5 +24,11 @@ return {
     [114831977475110] = {
         Name = "Jiwa Besi: Dungeon / Hutan Tanpa Bintang", 
         Script = "https://raw.githubusercontent.com/MikazuDbug/TeamMizu-HUB/refs/heads/main/Local%20script/JiwaBesiDungeon.lua"
+    },
+
+    -- KARTA SUNDA - Ruang Riung
+    [131848958487439] = {
+        Name = "KARTA SUNDA - Ruang Riung", 
+        Script = "https://raw.githubusercontent.com/MikazuDbug/TeamMizu-HUB/refs/heads/main/Local%20script/KartaSundaRuangRiung.lua"
     }
 }
