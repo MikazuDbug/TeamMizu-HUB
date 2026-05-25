@@ -1,99 +1,109 @@
--- Mizukage Official | TeamMizu🔰 - All rights reserved
--- Game: Sawah Indo
--- Script rebuilt by MIZU-OS v14.0
+--[[═══════════════════════════════════════════════════════════
+👑 MIZUKAGE OFFICIAL - UNIVERSAL BASE TEMPLATE
+Target Game: Sawah Indo
+Fitur Bawaan:
+- Premium Dashboard & Aesthetic UI (WindUI)
+- Anti-AFK & Auto Reconnect (Anti-Kick)
+- Clean Structure & Global Config
+═══════════════════════════════════════════════════════════]]
 
--- LOAD LUNA (WAJIB)
-local Luna = loadstring(game:HttpGet("https://raw.githubusercontent.com/Nebula-Softworks/Luna-Interface-Suite/refs/heads/master/source.lua", true))()
+if getgenv().MizuApexLoaded then
+    return game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = "Mizukage Official",
+        Text = "Sistem sudah beroperasi di memori!"
+    })
+end
+getgenv().MizuApexLoaded = true
 
--- BUAT WINDOW UTAMA
-local Window = Luna:CreateWindow({
-    Name = "Mizukage Official",
-    Subtitle = "Sawah Indo - TeamMizu🔰",
-    LogoID = "104266190557772",
-    LoadingEnabled = true,
-    LoadingTitle = "Mizukage System",
-    LoadingSubtitle = "by @MizukageOfficial",
-    ConfigSettings = {
-        RootFolder = nil,
-        ConfigFolder = "MizukageHub/SawahIndo"
-    },
-    KeySystem = false
+--================================================
+-- 1. DEKLARASI SERVICE & PATH
+--================================================
+local Services = setmetatable({}, {
+    __index = function(t, k)
+        local s = game:GetService(k)
+        t[k] = s
+        return s
+    end
 })
 
--- HOME TAB (WAJIB)
-Window:CreateHomeTab({
-    SupportedExecutors = {"Delta", "Codex", "Wave", "Arceus X", "Synapse X", "Krnl", "Fluxus", "Electron", "JJSploit", "Calamari", "SirHurt", "Sentinel", "WEAREDEVS", "Comet", "Cellery", "ProtoSmasher", "Script-Ware", "EasyExploits"},
-    DiscordInvite = "Mizukage-Official",
-    Icon = 1
-})
-
--- ============================================
--- SERVICES
--- ============================================
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Players = game:GetService("Players")
-local Workspace = game:GetService("Workspace")
-local MarketplaceService = game:GetService("MarketplaceService")
-local VirtualUser = game:GetService("VirtualUser")
-local TweenService = game:GetService("TweenService")
-
+local Players = Services.Players
 local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = Services.ReplicatedStorage
+local RunService = Services.RunService
+local Workspace = Services.Workspace
+local GuiService = Services.GuiService
+local TeleportService = Services.TeleportService
+local HttpService = Services.HttpService
+local MarketplaceService = Services.MarketplaceService
+local TweenService = Services.TweenService
+local VirtualUser = Services.VirtualUser
 
--- ============================================
--- REMOTES
--- ============================================
+--================================================
+-- 2. KONFIGURASI GLOBAL
+--================================================
+getgenv().MizuConfig = {
+    IsRunning = true,
+    -- Sawah Indo Specific Config
+    Farm = false,
+    Egg = false,
+    Milk = false,
+    AllFarm = false,
+    AllFarmPhase = "IDLE",
+    Selling = true,
+    SellEgg = false,
+    SellMilk = false,
+    SellFruit = false,
+    NoDelay = false,
+    AutoBuy = false,
+    PlantAmount = 15,
+    BurstAmount = 5,
+    SellDelay = 60,
+    MaxCrop = 15,
+    SelectedCrop = "Padi",
+    ActivePlot = nil,
+    MemoryPos = nil,
+    TPMode = "Memory",
+    MyPlots = {},
+    Session = { StartTime = os.clock(), TotalSold = 0, TotalEarned = 0 },
+    PlantPause = 0,
+    LastAutoTp = 0,
+    AntiAFK = false,
+    PadiPos = nil,
+    SawitPos = nil,
+    CoopPos = nil,
+    BarnPos = nil
+}
+
+--================================================
+-- 3. AUTO RECONNECT & ANTI-AFK
+--================================================
+local function SetupAutoReconnect()
+    GuiService.ErrorMessageChanged:Connect(function()
+        task.wait(0.5)
+        TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
+    end)
+
+    local virtualUser = game:GetService("VirtualUser")
+    LocalPlayer.Idled:Connect(function()
+        virtualUser:CaptureController()
+        virtualUser:ClickButton2(Vector2.new())
+    end)
+end
+
+--================================================
+-- 4. FUNGSI INTI (FUNGSI GAME BARU)
+--================================================
+
+-- 4.1 Remotes & Config Modules
 local GameRemotes = ReplicatedStorage:WaitForChild("Remotes")
 local TutorialRemotes = GameRemotes:WaitForChild("TutorialRemotes")
-
--- ============================================
--- CONFIG MODULES
--- ============================================
 local CropConfig = require(ReplicatedStorage.Modules:WaitForChild("CropConfig"))
-local EggConfig = require(ReplicatedStorage.Modules:WaitForChild("EggConfig"))
 
--- ============================================
--- FILE CONSTANTS
--- ============================================
+-- 4.2 File Constants
 local FAV_PLOT_FILE = "mizu_sawah_plots.txt"
 local ALL_FARM_FILE = "mizu_allfarm_pos.txt"
 
--- ============================================
--- GLOBAL STATE (getgenv)
--- ============================================
-local G = getgenv()
-G.Mizu_Farm = G.Mizu_Farm or false
-G.Mizu_Egg = G.Mizu_Egg or false
-G.Mizu_Milk = G.Mizu_Milk or false
-G.Mizu_AllFarm = G.Mizu_AllFarm or false
-G.Mizu_AllFarmPhase = G.Mizu_AllFarmPhase or "IDLE"
-G.Mizu_Selling = G.Mizu_Selling ~= false
-G.Mizu_SellEgg = G.Mizu_SellEgg ~= false
-G.Mizu_SellMilk = G.Mizu_SellMilk ~= false
-G.Mizu_SellFruit = G.Mizu_SellFruit ~= false
-G.Mizu_NoDelay = G.Mizu_NoDelay ~= false
-G.Mizu_AutoBuy = G.Mizu_AutoBuy ~= false
-G.Mizu_PlantAmount = G.Mizu_PlantAmount or 15
-G.Mizu_BurstAmount = G.Mizu_BurstAmount or 5
-G.Mizu_SellDelay = G.Mizu_SellDelay or 60
-G.Mizu_MaxCrop = G.Mizu_MaxCrop or 15
-G.Mizu_SelectedCrop = G.Mizu_SelectedCrop or "Padi"
-G.Mizu_ActivePlot = G.Mizu_ActivePlot or nil
-G.Mizu_MemoryPos = G.Mizu_MemoryPos or nil
-G.Mizu_TPMode = G.Mizu_TPMode or "Memory"
-G.Mizu_MyPlots = G.Mizu_MyPlots or {}
-G.Mizu_Session = G.Mizu_Session or { StartTime = os.clock(), TotalSold = 0, TotalEarned = 0 }
-G.Mizu_PlantPause = G.Mizu_PlantPause or 0
-G.Mizu_LastAutoTp = G.Mizu_LastAutoTp or 0
-G.Mizu_AntiAFK = G.Mizu_AntiAFK or false
-G.Mizu_PadiPos = G.Mizu_PadiPos or nil
-G.Mizu_SawitPos = G.Mizu_SawitPos or nil
-G.Mizu_CoopPos = G.Mizu_CoopPos or nil
-G.Mizu_BarnPos = G.Mizu_BarnPos or nil
-
--- ============================================
--- CHARACTER REFS
--- ============================================
+-- 4.3 Character Refs
 local character = nil
 local hum = nil
 local root = nil
@@ -107,9 +117,7 @@ end
 UpdateCharacter(LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait())
 LocalPlayer.CharacterAdded:Connect(UpdateCharacter)
 
--- ============================================
--- HELPER FUNCTIONS
--- ============================================
+-- 4.4 Helper Functions
 local function FormatNumber(num)
     local str = tostring(math.floor(tonumber(num) or 0))
     local k
@@ -118,14 +126,6 @@ local function FormatNumber(num)
         if k == 0 then break end
     end
     return str
-end
-
-local function GetHumanoidRootPart()
-    return root
-end
-
-local function GetHumanoid()
-    return hum
 end
 
 local function FirePrompt(prompt)
@@ -150,39 +150,32 @@ end
 
 local function SaveMemoryPosition()
     if root then
-        G.Mizu_MemoryPos = { pos = root.Position, savedAt = os.clock() }
+        getgenv().MizuConfig.MemoryPos = { pos = root.Position, savedAt = os.clock() }
         return true
     end
     return false
 end
 
 local function GetTeleportPosition()
-    if G.Mizu_TPMode == "Plot" and G.Mizu_ActivePlot then
-        return G.Mizu_ActivePlot.pos
+    local cfg = getgenv().MizuConfig
+    if cfg.TPMode == "Plot" and cfg.ActivePlot then
+        return cfg.ActivePlot.pos
     end
-    if G.Mizu_TPMode == "Memory" and G.Mizu_MemoryPos then
-        return G.Mizu_MemoryPos.pos
+    if cfg.TPMode == "Memory" and cfg.MemoryPos then
+        return cfg.MemoryPos.pos
     end
     return nil
 end
 
--- ============================================
--- FILE LOAD/SAVE FUNCTIONS
--- ============================================
+-- 4.5 File Load/Save
 local function LoadFavPlots()
     local success, data = pcall(readfile, FAV_PLOT_FILE)
-    if not success or not data or data == "" then
-        return { favPlots = {} }
-    end
-    
+    if not success or not data or data == "" then return { favPlots = {} } end
     local plots = { favPlots = {} }
     for line in data:gmatch("[^\n]+") do
         local label, x, y, z = line:match("^(.+)|([%-%.%d]+)|([%-%.%d]+)|([%-%.%d]+)$")
         if label and x and y and z then
-            table.insert(plots.favPlots, {
-                label = label,
-                pos = Vector3.new(tonumber(x), tonumber(y), tonumber(z))
-            })
+            table.insert(plots.favPlots, { label = label, pos = Vector3.new(tonumber(x), tonumber(y), tonumber(z)) })
         end
     end
     return plots
@@ -191,8 +184,7 @@ end
 local function SaveFavPlots(data)
     local lines = {}
     for _, plot in ipairs(data.favPlots) do
-        table.insert(lines, string.format("%s|%.3f|%.3f|%.3f", 
-            plot.label, plot.pos.X, plot.pos.Y, plot.pos.Z))
+        table.insert(lines, string.format("%s|%.3f|%.3f|%.3f", plot.label, plot.pos.X, plot.pos.Y, plot.pos.Z))
     end
     pcall(writefile, FAV_PLOT_FILE, table.concat(lines, "\n"))
 end
@@ -210,10 +202,7 @@ end
 local function LoadAllFarmPos()
     local result = { padiPos = nil, sawitPos = nil, coopPos = nil, barnPos = nil }
     local success, data = pcall(readfile, ALL_FARM_FILE)
-    if not success or not data or data == "" then 
-        return result 
-    end
-    
+    if not success or not data or data == "" then return result end
     for line in data:gmatch("[^\n]+") do
         local key, x, y, z = line:match("^(.+)|([%-%.%d]+)|([%-%.%d]+)|([%-%.%d]+)$")
         if key then
@@ -223,18 +212,15 @@ local function LoadAllFarmPos()
     return result
 end
 
--- Load saved data
 local SavedPlots = LoadFavPlots()
 local SavedFarmPos = LoadAllFarmPos()
 
-G.Mizu_PadiPos = G.Mizu_PadiPos or SavedFarmPos.padiPos
-G.Mizu_SawitPos = G.Mizu_SawitPos or SavedFarmPos.sawitPos
-G.Mizu_CoopPos = G.Mizu_CoopPos or SavedFarmPos.coopPos
-G.Mizu_BarnPos = G.Mizu_BarnPos or SavedFarmPos.barnPos
+getgenv().MizuConfig.PadiPos = getgenv().MizuConfig.PadiPos or SavedFarmPos.padiPos
+getgenv().MizuConfig.SawitPos = getgenv().MizuConfig.SawitPos or SavedFarmPos.sawitPos
+getgenv().MizuConfig.CoopPos = getgenv().MizuConfig.CoopPos or SavedFarmPos.coopPos
+getgenv().MizuConfig.BarnPos = getgenv().MizuConfig.BarnPos or SavedFarmPos.barnPos
 
--- ============================================
--- CROP DATABASE
--- ============================================
+-- 4.6 Crop Database
 local CropList = {}
 local CropDropdownList = {}
 local CropKeyMap = {}
@@ -249,13 +235,11 @@ for seedName, data in pairs(CropConfig.Seeds) do
     elseif seedName == "Bibit Sawit" then cropName = "Sawit"
     elseif seedName == "Bibit Durian" then cropName = "Durian"
     end
-
     if data.HarvestItem then
         CropList[cropName] = {
             SeedName = seedName,
             HarvestItem = data.HarvestItem,
-            Price = CropConfig.SellableItems and CropConfig.SellableItems[data.HarvestItem] and 
-                    CropConfig.SellableItems[data.HarvestItem].SellPrice or 10,
+            Price = CropConfig.SellableItems and CropConfig.SellableItems[data.HarvestItem] and CropConfig.SellableItems[data.HarvestItem].SellPrice or 10,
             MinLevel = data.MinLevel or 1,
             Icon = data.Icon or "🌾"
         }
@@ -274,17 +258,13 @@ for _, v in ipairs(sortedCrops) do
     CropKeyMap[display] = v.key
 end
 
--- ============================================
--- SCAN FUNCTIONS
--- ============================================
+-- 4.7 Scan Functions
 local function ScanCoopBarn()
     local coop, barn = nil, nil
-    
     for _, obj in ipairs(Workspace:GetDescendants()) do
         local owner = obj:GetAttribute("OwnerId") or obj:GetAttribute("Owner") or obj:GetAttribute("OwnerUserId")
         if owner and tostring(owner) == tostring(LocalPlayer.UserId) then
             local nameLower = string.lower(obj.Name or "")
-            
             if string.find(nameLower, "coop") then
                 if obj:IsA("Model") then
                     local primaryPart = obj.PrimaryPart
@@ -302,20 +282,15 @@ local function ScanCoopBarn()
             end
         end
     end
-    
     return coop, barn
 end
 
--- ============================================
--- CROP COUNTING
--- ============================================
+-- 4.8 Crop Counting
 local function CountActiveCrops()
     local active = Workspace:FindFirstChild("ActiveCrops")
     if not active then return 0 end
-    
     local count = 0
     local userId = tostring(LocalPlayer.UserId)
-    
     for _, crop in ipairs(active:GetChildren()) do
         if string.match(crop.Name, "Crop_(%d+)_") == userId then
             count = count + 1
@@ -327,26 +302,19 @@ end
 local function IsCropReady(crop)
     if crop:GetAttribute("IsReady") == true then return true end
     if crop:GetAttribute("Phase") == 3 then return true end
-    
     for _, desc in ipairs(crop:GetDescendants()) do
         if desc:IsA("ProximityPrompt") and desc.Enabled then
             local action = string.lower(desc.ActionText or "")
-            if action == "panen" or action == "harvest" then
-                return true
-            end
+            if action == "panen" or action == "harvest" then return true end
         end
     end
     return false
 end
 
--- ============================================
--- SEED MANAGEMENT
--- ============================================
+-- 4.9 Seed Management
 local function CountSeeds(cropData)
     if not cropData then return 0 end
-    
     local count = 0
-    
     local function checkContainer(container)
         for _, item in ipairs(container:GetChildren()) do
             if item:IsA("Tool") and string.find(item.Name, cropData.SeedName) then
@@ -355,16 +323,13 @@ local function CountSeeds(cropData)
             end
         end
     end
-    
     if character then checkContainer(character) end
     checkContainer(LocalPlayer.Backpack)
-    
     return count
 end
 
 local function BuySeeds(cropData, amount)
     if amount <= 0 or not cropData then return end
-    
     pcall(function()
         TutorialRemotes.RequestShop:InvokeServer("BUY", cropData.SeedName, amount)
     end)
@@ -373,15 +338,11 @@ end
 
 local function EquipSeed(cropData)
     if not cropData or not hum then return false end
-    
     if character then
         for _, tool in ipairs(character:GetChildren()) do
-            if tool:IsA("Tool") and string.find(tool.Name, cropData.SeedName) then
-                return true
-            end
+            if tool:IsA("Tool") and string.find(tool.Name, cropData.SeedName) then return true end
         end
     end
-    
     for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
         if tool:IsA("Tool") and string.find(tool.Name, cropData.SeedName) then
             hum:EquipTool(tool)
@@ -389,13 +350,10 @@ local function EquipSeed(cropData)
             return true
         end
     end
-    
     return false
 end
 
--- ============================================
--- PLANTING FUNCTIONS
--- ============================================
+-- 4.10 Planting
 local function RandomOffset(center, radius)
     local angle = math.rad(math.random(0, 360))
     local dist = math.random() * (radius or 18) + 2
@@ -403,60 +361,46 @@ local function RandomOffset(center, radius)
 end
 
 local function PlantCrop(cropName, centerPos)
+    local cfg = getgenv().MizuConfig
     local cropData = CropList[cropName]
     if not cropData then return end
-    
-    if os.clock() < G.Mizu_PlantPause then return end
-    
-    if CountActiveCrops() >= G.Mizu_MaxCrop then return end
-    
+    if os.clock() < cfg.PlantPause then return end
+    if CountActiveCrops() >= cfg.MaxCrop then return end
     if not centerPos then
         if not SaveMemoryPosition() then return end
         centerPos = GetTeleportPosition()
         if not centerPos then return end
     end
-    
     local seedCount = CountSeeds(cropData)
-    if seedCount < G.Mizu_BurstAmount then
-        if G.Mizu_AutoBuy then
-            BuySeeds(cropData, G.Mizu_PlantAmount - seedCount)
-        end
+    if seedCount < cfg.BurstAmount then
+        if cfg.AutoBuy then BuySeeds(cropData, cfg.PlantAmount - seedCount) end
         if CountSeeds(cropData) == 0 then return end
     end
-    
     if not EquipSeed(cropData) then return end
-    
-    local toPlant = math.min(G.Mizu_BurstAmount, math.max(G.Mizu_MaxCrop - CountActiveCrops(), 0))
+    local toPlant = math.min(cfg.BurstAmount, math.max(cfg.MaxCrop - CountActiveCrops(), 0))
     if toPlant == 0 then return end
-    
     for i = 1, toPlant do
         if CountSeeds(cropData) == 0 then
-            if G.Mizu_AutoBuy then
-                BuySeeds(cropData, G.Mizu_PlantAmount)
+            if cfg.AutoBuy then
+                BuySeeds(cropData, cfg.PlantAmount)
                 if not EquipSeed(cropData) then break end
             else
                 break
             end
         end
-        
         pcall(function()
             TutorialRemotes.PlantCrop:FireServer(RandomOffset(centerPos))
         end)
-        task.wait(G.Mizu_NoDelay and 0.1 or 0.3)
+        task.wait(cfg.NoDelay and 0.1 or 0.3)
     end
 end
 
--- ============================================
--- HARVEST FUNCTIONS
--- ============================================
+-- 4.11 Harvest
 local function HarvestInRadius(center, radius)
     if not root then return end
-    
     local active = Workspace:FindFirstChild("ActiveCrops")
     if not active then return end
-    
     local userId = tostring(LocalPlayer.UserId)
-    
     for _, crop in ipairs(active:GetChildren()) do
         if string.match(crop.Name, "Crop_(%d+)_") == userId and IsCropReady(crop) then
             for _, prompt in ipairs(crop:GetDescendants()) do
@@ -475,78 +419,51 @@ local function HarvestInRadius(center, radius)
     end
 end
 
--- ============================================
--- SELLING FUNCTIONS
--- ============================================
+-- 4.12 Selling
 local function SellCrop(cropName)
     if not CropList[cropName] then return 0 end
-    
     local success, result = pcall(function()
         return TutorialRemotes.RequestSell:InvokeServer("GET_LIST")
     end)
-    
-    if not success or type(result) ~= "table" or type(result.Items) ~= "table" then
-        return 0
-    end
-    
+    if not success or type(result) ~= "table" or type(result.Items) ~= "table" then return 0 end
     for _, item in pairs(result.Items) do
         if type(item) == "table" and tonumber(item.Owned) then
             local name = item.Name or item.DisplayName or ""
             if string.find(name, CropList[cropName].HarvestItem) then
                 local qty = tonumber(item.Owned)
                 local price = tonumber(item.SellPrice) or CropList[cropName].Price or 0
-                
                 if qty and qty > 0 then
                     pcall(function()
                         TutorialRemotes.RequestSell:InvokeServer("SELL", name, qty)
                     end)
-                    
-                    G.Mizu_Session.TotalSold = G.Mizu_Session.TotalSold + qty
-                    G.Mizu_Session.TotalEarned = G.Mizu_Session.TotalEarned + (qty * price)
+                    getgenv().MizuConfig.Session.TotalSold = getgenv().MizuConfig.Session.TotalSold + qty
+                    getgenv().MizuConfig.Session.TotalEarned = getgenv().MizuConfig.Session.TotalEarned + (qty * price)
                     task.wait(0.2)
                 end
                 return qty or 0
             end
         end
     end
-    
     return 0
 end
 
 local function SellAll()
+    local cfg = getgenv().MizuConfig
     for cropName in pairs(CropList) do
         pcall(SellCrop, cropName)
     end
-    
-    if G.Mizu_SellEgg then 
-        pcall(function() 
-            TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") 
-        end) 
-    end
-    
-    if G.Mizu_SellMilk then 
-        pcall(function() 
-            TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") 
-        end) 
-    end
-    
-    if G.Mizu_SellFruit then 
-        pcall(function() 
-            TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") 
-        end) 
-    end
+    if cfg.SellEgg then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") end) end
+    if cfg.SellMilk then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") end) end
+    if cfg.SellFruit then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") end) end
 end
 
--- ============================================
--- ANIMAL FUNCTIONS
--- ============================================
+-- 4.13 Animal Functions
 local FastInteractCache = {}
 local EggVisualCache = {}
 local MilkVisualCache = {}
 
 local function FeedAnimals(center, radius)
     if not root then return end
-    
     for prompt in pairs(FastInteractCache) do
         if prompt and prompt.Parent and prompt.Enabled then
             local action = string.lower(prompt.ActionText or "")
@@ -569,7 +486,6 @@ end
 
 local function CollectAnimals(center, radius)
     if not root then return end
-    
     for prompt in pairs(FastInteractCache) do
         if prompt and prompt.Parent and prompt.Enabled then
             local action = string.lower(prompt.ActionText or "")
@@ -590,12 +506,9 @@ local function CollectAnimals(center, radius)
     TeleportTo(center)
 end
 
--- ============================================
--- AUTO COLLECT LOOPS
--- ============================================
+-- 4.14 Auto Collect Loops
 local function AutoEggLoop()
     if not root then return end
-    
     for egg in pairs(EggVisualCache) do
         if egg and egg.Parent then
             local prompt = egg:FindFirstChildOfClass("ProximityPrompt")
@@ -613,7 +526,6 @@ end
 
 local function AutoMilkLoop()
     if not root then return end
-    
     for milk in pairs(MilkVisualCache) do
         if milk and milk.Parent then
             local prompt = milk:FindFirstChildOfClass("ProximityPrompt")
@@ -629,12 +541,10 @@ local function AutoMilkLoop()
     end
 end
 
--- ============================================
--- MAIN LOOPS
--- ============================================
+-- 4.15 Main Loops
 local function StartPlantLoop(flagName, cropName, centerPos)
     task.spawn(function()
-        while G[flagName] do
+        while getgenv().MizuConfig[flagName] do
             PlantCrop(cropName, centerPos)
             task.wait(0.3)
         end
@@ -643,7 +553,7 @@ end
 
 local function StartHarvestLoop(flagName)
     task.spawn(function()
-        while G[flagName] do
+        while getgenv().MizuConfig[flagName] do
             pcall(function()
                 local pos = GetTeleportPosition()
                 if pos then HarvestInRadius(pos, 80) end
@@ -655,28 +565,15 @@ end
 
 local function StartSellLoop(flagName)
     task.spawn(function()
-        while G[flagName] do
-            if G.Mizu_Selling then
-                local sold = SellCrop(G.Mizu_SelectedCrop)
-                if sold and sold > 0 then
-                    Luna:Notification({ Title = "Jual Tanaman", Content = "Terjual " .. sold .. " item", Icon = "check", ImageSource = "Material" })
-                end
+        while getgenv().MizuConfig[flagName] do
+            if getgenv().MizuConfig.Selling then
+                SellCrop(getgenv().MizuConfig.SelectedCrop)
             end
-            
-            if G.Mizu_SellEgg then 
-                pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") end) 
-            end
-            
-            if G.Mizu_SellMilk then 
-                pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") end) 
-            end
-            
-            if G.Mizu_SellFruit then 
-                pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") end) 
-            end
-            
-            for i = 1, G.Mizu_SellDelay or 60 do
-                if not G[flagName] then return end
+            if getgenv().MizuConfig.SellEgg then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") end) end
+            if getgenv().MizuConfig.SellMilk then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") end) end
+            if getgenv().MizuConfig.SellFruit then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") end) end
+            for i = 1, (getgenv().MizuConfig.SellDelay or 60) do
+                if not getgenv().MizuConfig[flagName] then return end
                 task.wait(1)
             end
         end
@@ -685,7 +582,7 @@ end
 
 local function StartEggLoop(flagName)
     task.spawn(function()
-        while G[flagName] do
+        while getgenv().MizuConfig[flagName] do
             pcall(AutoEggLoop)
             task.wait(0.8)
         end
@@ -694,7 +591,7 @@ end
 
 local function StartMilkLoop(flagName)
     task.spawn(function()
-        while G[flagName] do
+        while getgenv().MizuConfig[flagName] do
             pcall(AutoMilkLoop)
             task.wait(0.8)
         end
@@ -703,12 +600,12 @@ end
 
 local function StartAutoTP(flagName)
     task.spawn(function()
-        while G[flagName] do
-            if not G.Mizu_AllFarm then
+        while getgenv().MizuConfig[flagName] do
+            if not getgenv().MizuConfig.AllFarm then
                 local pos = GetTeleportPosition()
-                if pos and os.clock() - G.Mizu_LastAutoTp > 60 then
+                if pos and os.clock() - getgenv().MizuConfig.LastAutoTp > 60 then
                     TeleportTo(pos)
-                    G.Mizu_LastAutoTp = os.clock()
+                    getgenv().MizuConfig.LastAutoTp = os.clock()
                 end
             end
             task.wait(5)
@@ -716,47 +613,41 @@ local function StartAutoTP(flagName)
     end)
 end
 
--- ============================================
--- ALL FARM LOOP
--- ============================================
+-- 4.16 All Farm Loop
 local function AllFarmLoop()
     task.spawn(function()
-        while G.Mizu_AllFarm do
+        while getgenv().MizuConfig.AllFarm do
             pcall(SellAll)
             for i = 1, 60 do
-                if not G.Mizu_AllFarm then return end
+                if not getgenv().MizuConfig.AllFarm then return end
                 task.wait(1)
             end
         end
     end)
     
-    while G.Mizu_AllFarm do
+    while getgenv().MizuConfig.AllFarm do
+        local cfg = getgenv().MizuConfig
         -- Phase 1: Padi
-        local padiPos = G.Mizu_PadiPos
+        local padiPos = cfg.PadiPos
         if padiPos then
-            G.Mizu_AllFarmPhase = "PADI"
+            cfg.AllFarmPhase = "PADI"
             TeleportTo(padiPos)
-            
             local start = os.clock()
-            while os.clock() - start < 2 and G.Mizu_AllFarm do
-                pcall(PlantCrop, G.Mizu_SelectedCrop, padiPos)
+            while os.clock() - start < 2 and cfg.AllFarm do
+                pcall(PlantCrop, cfg.SelectedCrop, padiPos)
                 pcall(HarvestInRadius, padiPos, 80)
                 task.wait(0.15)
             end
-        else
-            Luna:Notification({ Title = "All Farm", Content = "Koordinat Padi belum diset!", Icon = "warning", ImageSource = "Material" })
-            task.wait(2)
         end
         
-        if not G.Mizu_AllFarm then break end
+        if not cfg.AllFarm then break end
         
         -- Phase 2: Sawit + Durian
-        local sawitPos = G.Mizu_SawitPos
+        local sawitPos = cfg.SawitPos
         if sawitPos then
-            G.Mizu_AllFarmPhase = "SAWIT"
+            cfg.AllFarmPhase = "SAWIT"
             TeleportTo(sawitPos)
             task.wait(0.3)
-            
             pcall(function()
                 local cropData = CropList["Sawit"]
                 if cropData and CountSeeds(cropData) > 0 and EquipSeed(cropData) then
@@ -764,11 +655,9 @@ local function AllFarmLoop()
                 end
             end)
             task.wait(0.3)
-            
             if root then
                 root.CFrame = root.CFrame + Vector3.new(4, 0, 0)
                 task.wait(0.2)
-                
                 pcall(function()
                     local cropData = CropList["Durian"]
                     if cropData and CountSeeds(cropData) > 0 and EquipSeed(cropData) then
@@ -777,18 +666,17 @@ local function AllFarmLoop()
                 end)
                 task.wait(0.3)
             end
-            
             pcall(HarvestInRadius, sawitPos, 80)
             task.wait(0.3)
             TeleportTo(sawitPos)
         end
         
-        if not G.Mizu_AllFarm then break end
+        if not cfg.AllFarm then break end
         
         -- Phase 3: Coop
-        local coopPos = G.Mizu_CoopPos
+        local coopPos = cfg.CoopPos
         if coopPos then
-            G.Mizu_AllFarmPhase = "COOP"
+            cfg.AllFarmPhase = "COOP"
             TeleportTo(coopPos)
             task.wait(0.3)
             pcall(FeedAnimals, coopPos, 70)
@@ -796,12 +684,12 @@ local function AllFarmLoop()
             pcall(CollectAnimals, coopPos, 70)
         end
         
-        if not G.Mizu_AllFarm then break end
+        if not cfg.AllFarm then break end
         
         -- Phase 4: Barn
-        local barnPos = G.Mizu_BarnPos
+        local barnPos = cfg.BarnPos
         if barnPos then
-            G.Mizu_AllFarmPhase = "BARN"
+            cfg.AllFarmPhase = "BARN"
             TeleportTo(barnPos)
             task.wait(0.3)
             pcall(FeedAnimals, barnPos, 70)
@@ -810,68 +698,42 @@ local function AllFarmLoop()
         end
     end
     
-    G.Mizu_AllFarmPhase = "IDLE"
-    Luna:Notification({ Title = "All Farm", Content = "Dihentikan", Icon = "warning", ImageSource = "Material" })
+    getgenv().MizuConfig.AllFarmPhase = "IDLE"
 end
 
--- ============================================
--- AUTO CLICK CONFIRM
--- ============================================
-local ConfirmTouchOffset = Vector2.new(0, 36)
-
-local function SendTouch(pos)
-    pcall(function()
-        VirtualUser:CaptureController()
-        if VirtualUser.TouchTap then
-            VirtualUser:TouchTap(pos, Enum.UserInputType.Touch)
-        end
-        VirtualUser:ClickButton1(pos)
-    end)
-end
-
+-- 4.17 Auto Click Confirm
 local function SetupConfirmClicker()
     local playerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
     local function WatchConfirm(gui)
         task.spawn(function()
             task.wait(0.05)
             pcall(function()
                 local overlay = gui:FindFirstChild("ConfirmOverlay")
                 if not overlay or not overlay.Visible then return end
-                
                 local card = overlay:FindFirstChild("ConfirmCard")
                 if not card or not card.Visible then return end
-                
                 local yesBtn = card:FindFirstChild("YesButton")
                 if not yesBtn or not yesBtn.Visible then return end
-                
-                local pos = yesBtn.AbsolutePosition + yesBtn.AbsoluteSize / 2
-                
                 pcall(function() yesBtn.MouseButton1Click:Fire() end)
                 pcall(function() yesBtn.Activated:Fire() end)
-                
-                SendTouch(pos + ConfirmTouchOffset)
-                SendTouch(pos)
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(yesBtn.AbsolutePosition + yesBtn.AbsoluteSize / 2)
             end)
         end)
     end
-    
     local confirmGui = playerGui:FindFirstChild("ConfirmGui")
     if confirmGui then WatchConfirm(confirmGui) end
-    
     playerGui.ChildAdded:Connect(function(child)
         if child.Name == "ConfirmGui" then WatchConfirm(child) end
     end)
 end
 
--- ============================================
--- PROMPT CACHE SETUP
--- ============================================
+-- 4.18 Prompt Cache Setup
 local function SetupPromptCache()
     for _, obj in ipairs(Workspace:GetDescendants()) do
         if obj:IsA("ProximityPrompt") then
             FastInteractCache[obj] = true
-            if G.Mizu_NoDelay and obj.HoldDuration > 0 then
+            if getgenv().MizuConfig.NoDelay and obj.HoldDuration > 0 then
                 obj.HoldDuration = 0
             end
         elseif obj:IsA("BasePart") then
@@ -885,29 +747,19 @@ local function SetupPromptCache()
     end
 end
 
--- ============================================
--- EVENT CONNECTIONS
--- ============================================
+-- 4.19 Event Connections
 local function SetupEventConnections()
     TutorialRemotes.Notification.OnClientEvent:Connect(function(msg)
         if type(msg) ~= "string" then return end
-        
         if string.find(msg, "Maximum 15 crops") then
-            G.Mizu_PlantPause = os.clock() + 30
-            Luna:Notification({ Title = "Pause Tanam", Content = "Crop penuh, pause 30 detik", Icon = "warning", ImageSource = "Material" })
-        end
-        
-        if string.find(msg, "berhasil") or string.find(msg, "success") then
-            Luna:Notification({ Title = "Server", Content = msg, Icon = "check", ImageSource = "Material" })
-        elseif string.find(msg, "gagal") or string.find(msg, "fail") then
-            Luna:Notification({ Title = "Server", Content = msg, Icon = "error", ImageSource = "Material" })
+            getgenv().MizuConfig.PlantPause = os.clock() + 30
         end
     end)
     
     Workspace.DescendantAdded:Connect(function(obj)
         if obj:IsA("ProximityPrompt") then
             FastInteractCache[obj] = true
-            if G.Mizu_NoDelay and obj.HoldDuration > 0 then
+            if getgenv().MizuConfig.NoDelay and obj.HoldDuration > 0 then
                 obj.HoldDuration = 0
             end
         elseif obj:IsA("BasePart") then
@@ -928,7 +780,7 @@ local function SetupEventConnections()
     
     task.spawn(function()
         while task.wait(10) do
-            if G.Mizu_NoDelay then
+            if getgenv().MizuConfig.NoDelay then
                 for prompt in pairs(FastInteractCache) do
                     if prompt and prompt.HoldDuration > 0 then
                         prompt.HoldDuration = 0
@@ -939,514 +791,490 @@ local function SetupEventConnections()
     end)
 end
 
--- ============================================
--- CREATE TABS (LUNA)
--- ============================================
-
--- All Farm Tab
-local AllFarmTab = Window:CreateTab({ Name = "All Farm", Icon = "rocket", ImageSource = "Material", ShowTitle = true })
-
-AllFarmTab:CreateParagraph({ Title = "SETUP KOORDINAT", Text = "Pergi ke setiap lokasi lalu klik tombol Simpan" })
-
-AllFarmTab:CreateDropdown({
-    Name = "Pilih Tanaman (Phase 1)",
-    Options = CropDropdownList,
-    CurrentOption = {CropDropdownList[1] or "Padi [lv.1] 🌾"},
-    Callback = function(choice)
-        G.Mizu_SelectedCrop = CropKeyMap[choice[1]] or "Padi"
-        Luna:Notification({ Title = "Tanaman", Content = "Phase 1: " .. G.Mizu_SelectedCrop, Icon = "info", ImageSource = "Material" })
-    end
-})
-
-AllFarmTab:CreateButton({
-    Name = "Simpan Koordinat Tanam",
-    Callback = function()
-        if not root then
-            Luna:Notification({ Title = "Error", Content = "Karakter belum spawn", Icon = "error", ImageSource = "Material" })
-            return
+-- 4.20 Core Loop Handler (StartAutoFarm)
+local function StartAutoFarm()
+    -- All Farm Loop
+    task.spawn(function()
+        while getgenv().MizuConfig.IsRunning do
+            if getgenv().MizuConfig.AllFarm then
+                AllFarmLoop()
+            end
+            task.wait(1)
         end
-        G.Mizu_PadiPos = root.Position
-        SavedFarmPos.padiPos = root.Position
-        SaveAllFarmPos(SavedFarmPos)
-        Luna:Notification({ Title = "Tersimpan", Content = string.format("Padi @ %.0f, %.0f, %.0f", root.Position.X, root.Position.Y, root.Position.Z), Icon = "check", ImageSource = "Material" })
-    end
-})
-
-AllFarmTab:CreateDivider()
-
-AllFarmTab:CreateButton({
-    Name = "Simpan Koordinat Sawit",
-    Callback = function()
-        if not root then
-            Luna:Notification({ Title = "Error", Content = "Karakter belum spawn", Icon = "error", ImageSource = "Material" })
-            return
-        end
-        G.Mizu_SawitPos = root.Position
-        SavedFarmPos.sawitPos = root.Position
-        SaveAllFarmPos(SavedFarmPos)
-        Luna:Notification({ Title = "Tersimpan", Content = string.format("Sawit @ %.0f, %.0f, %.0f", root.Position.X, root.Position.Y, root.Position.Z), Icon = "check", ImageSource = "Material" })
-    end
-})
-
-AllFarmTab:CreateDivider()
-AllFarmTab:CreateParagraph({ Title = "KANDANG", Text = "Kandang auto-scan. Klik Refresh untuk update posisi." })
-
-local CoopLabel = AllFarmTab:CreateParagraph({ Title = "Coop", Text = "Coop: Belum di-scan" })
-local BarnLabel = AllFarmTab:CreateParagraph({ Title = "Barn", Text = "Barn: Tidak ditemukan" })
-
-AllFarmTab:CreateButton({
-    Name = "Refresh Kandang",
-    Callback = function()
-        task.spawn(function()
-            Luna:Notification({ Title = "Scanning...", Content = "Mencari kandang milikmu...", Icon = "info", ImageSource = "Material" })
-            local coop, barn = ScanCoopBarn()
-            
-            if coop then
-                G.Mizu_CoopPos = coop
-                CoopLabel:Set(string.format("Coop: %.0f, %.0f, %.0f ✅", coop.X, coop.Y, coop.Z))
-            else
-                CoopLabel:Set("Coop: Tidak ditemukan ❌")
-            end
-            
-            if barn then
-                G.Mizu_BarnPos = barn
-                BarnLabel:Set(string.format("Barn: %.0f, %.0f, %.0f ✅", barn.X, barn.Y, barn.Z))
-            else
-                BarnLabel:Set("Barn: Tidak ditemukan ❌")
-            end
-            
-            Luna:Notification({ Title = "Scan Selesai", Content = (coop and "Coop ✅" or "Coop ❌") .. " | " .. (barn and "Barn ✅" or "Barn ❌"), Icon = "check", ImageSource = "Material" })
-        end)
-    end
-})
-
-AllFarmTab:CreateDivider()
-AllFarmTab:CreateParagraph({ Title = "KONTROL ALL FARM", Text = "Auto farm semua area" })
-
-local PhaseLabel = AllFarmTab:CreateParagraph({ Title = "Phase", Text = "Phase: IDLE" })
-
-AllFarmTab:CreateToggle({
-    Name = "AUTO FARM ALL",
-    CurrentValue = false,
-    Callback = function(state)
-        G.Mizu_AllFarm = state
-        G.Mizu_Farm = false
-        G.Mizu_Egg = false
-        G.Mizu_Milk = false
-        
-        if state then
-            if not G.Mizu_PadiPos then
-                Luna:Notification({ Title = "Error", Content = "Koordinat Padi wajib diset dulu!", Icon = "error", ImageSource = "Material" })
-                G.Mizu_AllFarm = false
-                return
-            end
-            Luna:Notification({ Title = "ALL FARM", Content = "Loop terpadu dimulai!", Icon = "check", ImageSource = "Material" })
-            task.spawn(AllFarmLoop)
-        else
-            G.Mizu_AllFarmPhase = "IDLE"
-            Luna:Notification({ Title = "All Farm", Content = "Dihentikan", Icon = "warning", ImageSource = "Material" })
-        end
-    end
-})
-
-task.spawn(function()
-    local phaseMap = { IDLE = "IDLE", PADI = "Tanam Padi", SAWIT = "Sawit", COOP = "Kandang Ayam", BARN = "Kandang Sapi" }
-    while task.wait(1) do
-        local phase = G.Mizu_AllFarmPhase or "IDLE"
-        pcall(function() PhaseLabel:Set("Phase: " .. (phaseMap[phase] or phase)) end)
-    end
-end)
-
-AllFarmTab:CreateButton({
-    Name = "Jual Semua Sekarang",
-    Callback = function()
-        task.spawn(function()
-            Luna:Notification({ Title = "Jual Semua", Content = "Proses jual semua item...", Icon = "info", ImageSource = "Material" })
-            local total = 0
-            for cropName in pairs(CropList) do
-                total = total + (SellCrop(cropName) or 0)
-            end
-            if G.Mizu_SellEgg then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") end) end
-            if G.Mizu_SellMilk then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") end) end
-            if G.Mizu_SellFruit then pcall(function() TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") end) end
-            Luna:Notification({ Title = "Jual Semua", Content = "Selesai! Tanaman: " .. total .. " item", Icon = "check", ImageSource = "Material" })
-        end)
-    end
-})
-
--- Tanaman Tab
-local PlantTab = Window:CreateTab({ Name = "Tanaman", Icon = "grass", ImageSource = "Material", ShowTitle = true })
-
-PlantTab:CreateParagraph({ Title = "KONFIGURASI", Text = "Pengaturan auto tanaman" })
-
-PlantTab:CreateDropdown({
-    Name = "Target Tanaman",
-    Options = CropDropdownList,
-    CurrentOption = {CropDropdownList[1] or "Padi [lv.1] 🌾"},
-    Callback = function(choice)
-        G.Mizu_SelectedCrop = CropKeyMap[choice[1]] or "Padi"
-        Luna:Notification({ Title = "Target", Content = "Tanaman: " .. G.Mizu_SelectedCrop, Icon = "info", ImageSource = "Material" })
-    end
-})
-
-PlantTab:CreateSlider({ Name = "Maks Bibit di Tas", Range = {1, 99}, Increment = 1, CurrentValue = G.Mizu_PlantAmount, Callback = function(v) G.Mizu_PlantAmount = v end })
-PlantTab:CreateSlider({ Name = "Max Crop Aktif", Range = {1, 50}, Increment = 1, CurrentValue = G.Mizu_MaxCrop, Callback = function(v) G.Mizu_MaxCrop = v end })
-PlantTab:CreateSlider({ Name = "Seed per Burst", Range = {1, 30}, Increment = 1, CurrentValue = G.Mizu_BurstAmount, Callback = function(v) G.Mizu_BurstAmount = v end })
-PlantTab:CreateSlider({ Name = "Auto Sell Delay", Range = {10, 300}, Increment = 1, CurrentValue = G.Mizu_SellDelay, Callback = function(v) G.Mizu_SellDelay = math.floor(v) end })
-
-PlantTab:CreateDivider()
-PlantTab:CreateParagraph({ Title = "CONTROL", Text = "Auto farm tanaman" })
-
-PlantTab:CreateToggle({
-    Name = "Auto Farm Tanaman",
-    CurrentValue = false,
-    Callback = function(state)
-        G.Mizu_Farm = state
-        
-        if state then
-            if G.Mizu_AllFarm then
-                Luna:Notification({ Title = "Warning", Content = "Matikan All Farm dulu!", Icon = "warning", ImageSource = "Material" })
-                G.Mizu_Farm = false
-                return
-            end
-            
-            if SaveMemoryPosition() then
-                Luna:Notification({ Title = "Memory", Content = "Posisi tersimpan untuk Auto TP", Icon = "check", ImageSource = "Material" })
-            end
-            
-            StartPlantLoop("Mizu_Farm", G.Mizu_SelectedCrop, GetTeleportPosition())
-            StartHarvestLoop("Mizu_Farm")
-            StartSellLoop("Mizu_Farm")
-            StartAutoTP("Mizu_Farm")
-            
-            Luna:Notification({ Title = "Auto Farm", Content = "Dimulai! (Mode: " .. G.Mizu_TPMode .. ")", Icon = "check", ImageSource = "Material" })
-        else
-            Luna:Notification({ Title = "Auto Farm", Content = "Dihentikan", Icon = "warning", ImageSource = "Material" })
-        end
-    end
-})
-
-PlantTab:CreateToggle({ Name = "Auto Beli Bibit", CurrentValue = G.Mizu_AutoBuy, Callback = function(v) G.Mizu_AutoBuy = v end })
-PlantTab:CreateToggle({ Name = "Auto Jual Tanaman", CurrentValue = G.Mizu_Selling, Callback = function(v) G.Mizu_Selling = v end })
-
-PlantTab:CreateDivider()
-PlantTab:CreateParagraph({ Title = "MANUAL", Text = "Tombol aksi manual" })
-
-PlantTab:CreateButton({
-    Name = "Jual Tanaman Sekarang",
-    Callback = function()
-        task.spawn(function()
-            local sold = SellCrop(G.Mizu_SelectedCrop)
-            Luna:Notification({ Title = "Jual", Content = sold > 0 and "Terjual " .. sold .. " item" or "Kosong", Icon = sold > 0 and "check" or "warning", ImageSource = "Material" })
-        end)
-    end
-})
-
--- Ternak Tab
-local FarmTab = Window:CreateTab({ Name = "Ternak", Icon = "pets", ImageSource = "Material", ShowTitle = true })
-
-FarmTab:CreateParagraph({ Title = "AUTO EGG", Text = "Auto collect dan jual telur" })
-
-FarmTab:CreateToggle({
-    Name = "Auto Collect Telur",
-    CurrentValue = false,
-    Callback = function(state)
-        G.Mizu_Egg = state
-        if state then
-            if G.Mizu_AllFarm then
-                Luna:Notification({ Title = "Warning", Content = "Matikan All Farm dulu!", Icon = "warning", ImageSource = "Material" })
-                G.Mizu_Egg = false
-                return
-            end
-            StartEggLoop("Mizu_Egg")
-            Luna:Notification({ Title = "Auto Egg", Content = "Dimulai!", Icon = "check", ImageSource = "Material" })
-        else
-            Luna:Notification({ Title = "Auto Egg", Content = "Dihentikan", Icon = "warning", ImageSource = "Material" })
-        end
-    end
-})
-
-FarmTab:CreateToggle({ Name = "Auto Jual Telur", CurrentValue = G.Mizu_SellEgg, Callback = function(v) G.Mizu_SellEgg = v end })
-FarmTab:CreateButton({ Name = "Jual Telur Sekarang", Callback = function() task.spawn(function() TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") end); Luna:Notification({ Title = "Jual Telur", Content = "Selesai", Icon = "check", ImageSource = "Material" }) end })
-
-FarmTab:CreateDivider()
-FarmTab:CreateParagraph({ Title = "AUTO MILK", Text = "Auto collect dan jual susu" })
-
-FarmTab:CreateToggle({
-    Name = "Auto Collect Susu",
-    CurrentValue = false,
-    Callback = function(state)
-        G.Mizu_Milk = state
-        if state then
-            if G.Mizu_AllFarm then
-                Luna:Notification({ Title = "Warning", Content = "Matikan All Farm dulu!", Icon = "warning", ImageSource = "Material" })
-                G.Mizu_Milk = false
-                return
-            end
-            StartMilkLoop("Mizu_Milk")
-            Luna:Notification({ Title = "Auto Milk", Content = "Dimulai!", Icon = "check", ImageSource = "Material" })
-        else
-            Luna:Notification({ Title = "Auto Milk", Content = "Dihentikan", Icon = "warning", ImageSource = "Material" })
-        end
-    end
-})
-
-FarmTab:CreateToggle({ Name = "Auto Jual Susu", CurrentValue = G.Mizu_SellMilk, Callback = function(v) G.Mizu_SellMilk = v end })
-FarmTab:CreateButton({ Name = "Jual Susu Sekarang", Callback = function() task.spawn(function() TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") end); Luna:Notification({ Title = "Jual Susu", Content = "Selesai", Icon = "check", ImageSource = "Material" }) end })
-
-FarmTab:CreateDivider()
-FarmTab:CreateParagraph({ Title = "AUTO FRUIT", Text = "Auto jual buah" })
-
-FarmTab:CreateToggle({ Name = "Auto Jual Buah", CurrentValue = G.Mizu_SellFruit, Callback = function(v) G.Mizu_SellFruit = v end })
-FarmTab:CreateButton({ Name = "Jual Buah Sekarang", Callback = function() task.spawn(function() TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") end); Luna:Notification({ Title = "Jual Buah", Content = "Selesai", Icon = "check", ImageSource = "Material" }) end })
-
--- TP Manager Tab
-local TPManagerTab = Window:CreateTab({ Name = "TP Manager", Icon = "map", ImageSource = "Material", ShowTitle = true })
-
-TPManagerTab:CreateParagraph({ Title = "MODE AUTO TP", Text = "Pilih mode teleportasi" })
-
-TPManagerTab:CreateToggle({
-    Name = "Smart Memory TP",
-    CurrentValue = true,
-    Callback = function(state)
-        if state then
-            G.Mizu_TPMode = "Memory"
-            if not G.Mizu_MemoryPos then SaveMemoryPosition() end
-            Luna:Notification({ Title = "Mode TP", Content = "Memory Position", Icon = "check", ImageSource = "Material" })
-        else
-            G.Mizu_TPMode = "Plot"
-            Luna:Notification({ Title = "Mode TP", Content = "Plot Aktif", Icon = "info", ImageSource = "Material" })
-        end
-    end
-})
-
-TPManagerTab:CreateDivider()
-TPManagerTab:CreateParagraph({ Title = "PLOT AKTIF", Text = "Pilih plot favorit" })
-
-local plotList = { "(pilih plot)" }
-for _, plot in ipairs(SavedPlots.favPlots) do
-    table.insert(plotList, plot.label)
+    end)
 end
 
-local plotDropdown = TPManagerTab:CreateDropdown({
-    Name = "Pilih Plot Aktif",
-    Options = plotList,
-    CurrentOption = {"(pilih plot)"},
-    Callback = function(choice)
-        if choice[1] == "(pilih plot)" then
-            G.Mizu_ActivePlot = nil
-            Luna:Notification({ Title = "Plot Aktif", Content = "Dinonaktifkan", Icon = "warning", ImageSource = "Material" })
-            return
-        end
-        
-        for _, plot in ipairs(SavedPlots.favPlots) do
-            if plot.label == choice[1] then
-                G.Mizu_ActivePlot = plot
-                TeleportTo(plot.pos)
-                G.Mizu_LastAutoTp = os.clock()
-                Luna:Notification({ Title = "Plot Aktif", Content = plot.label .. " dipilih", Icon = "check", ImageSource = "Material" })
-                break
-            end
-        end
+--================================================
+-- 5. INISIALISASI ANTARMUKA (WIND UI)
+--================================================
+local function InitInterface()
+    local success, WindUI = pcall(function()
+        return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
+    end)
+    if not success then
+        return
     end
-})
 
-TPManagerTab:CreateDivider()
-TPManagerTab:CreateParagraph({ Title = "MEMORY POSITION", Text = "Simpan posisi memori" })
+    -- =================== TEMA PREMIUM VIP ===================
+    WindUI:AddTheme({
+        Name = "MizukageVIP",
+        Accent = Color3.fromHex("#00e5ff"),
+        Dialog = Color3.fromHex("#0a0a0f"),
+        Outline = Color3.fromHex("#00e5ff"),
+        Text = Color3.fromHex("#f0f0ff"),
+        Placeholder = Color3.fromHex("#8899aa"),
+        Button = Color3.fromHex("#1a1a2e"),
+        Icon = Color3.fromHex("#00e5ff"),
+        WindowBackground = Color3.fromHex("#050510"),
+        TopbarButtonIcon = Color3.fromHex("#00e5ff"),
+        TopbarTitle = Color3.fromHex("#ffffff"),
+        TopbarAuthor = Color3.fromHex("#8899aa"),
+        TopbarIcon = Color3.fromHex("#00e5ff"),
+        TabBackground = Color3.fromHex("#0f0f1a"),
+        TabTitle = Color3.fromHex("#e0e0ff"),
+        TabIcon = Color3.fromHex("#00e5ff"),
+        ElementBackground = Color3.fromHex("#12121e"),
+        ElementTitle = Color3.fromHex("#f0f0ff"),
+        ElementDesc = Color3.fromHex("#aabbcc"),
+        ElementIcon = Color3.fromHex("#00e5ff"),
+    })
 
-TPManagerTab:CreateButton({
-    Name = "Update Memory Position",
-    Callback = function()
-        if SaveMemoryPosition() then
-            Luna:Notification({ Title = "Memory", Content = "Posisi tersimpan", Icon = "check", ImageSource = "Material" })
-        else
-            Luna:Notification({ Title = "Gagal", Content = "Karakter tidak ditemukan", Icon = "error", ImageSource = "Material" })
-        end
+    WindUI:SetTheme("MizukageVIP")
+
+    -- SISTEM SUARA (AUDIO)
+    local Sounds = {
+        StartupId = "rbxassetid://140397610798305",
+        ClickId = "rbxassetid://140277245983305"
+    }
+    pcall(function()
+        Services.ContentProvider:PreloadAsync({Sounds.StartupId, Sounds.ClickId})
+    end)
+
+    function Sounds:Play(id, volume)
+        task.spawn(function()
+            local s = Instance.new("Sound")
+            s.SoundId = id
+            s.Volume = volume or 1
+            s.Parent = Services.SoundService
+            s.Ended:Connect(function()
+                s:Destroy()
+            end)
+            s:Play()
+        end)
     end
-})
 
-TPManagerTab:CreateButton({
-    Name = "TP ke Memory Position",
-    Callback = function()
-        if G.Mizu_MemoryPos then
-            TeleportTo(G.Mizu_MemoryPos.pos)
-            Luna:Notification({ Title = "TP", Content = "Ke memory position", Icon = "check", ImageSource = "Material" })
-        else
-            Luna:Notification({ Title = "Error", Content = "Belum ada memory tersimpan", Icon = "warning", ImageSource = "Material" })
-        end
+    function Sounds:Startup()
+        self:Play(Sounds.StartupId, 1)
     end
-})
 
--- Plot Manager Tab
-local PlotManagerTab = Window:CreateTab({ Name = "Plot Manager", Icon = "list", ImageSource = "Material", ShowTitle = true })
+    function Sounds:Click()
+        self:Play(Sounds.ClickId, 0.8)
+    end
 
-PlotManagerTab:CreateParagraph({ Title = "PLOT TERSIMPAN", Text = "Kelola plot favorit" })
+    Sounds:Startup()
 
-local selectedPlotToDelete = "(pilih)"
-PlotManagerTab:CreateDropdown({
-    Name = "Pilih Plot untuk Dihapus",
-    Options = plotList,
-    CurrentOption = {"(pilih plot)"},
-    Callback = function(choice) selectedPlotToDelete = choice[1] end
-})
+    -- =================== WINDOW PREMIUM ===================
+    local Window = WindUI:CreateWindow({
+        Title = "MIZUKAGE OFFICIAL",
+        Icon = "skull",
+        Author = "TeamMizu 🔰",
+        Folder = "MizukageOfficial",
+        NewElements = true,
+        Size = UDim2.fromOffset(720, 520),
+        Transparent = true,
+        Theme = "MizukageVIP",
+        Accent = Color3.fromRGB(0, 255, 255),
+        SideBarWidth = 240,
+        HasOutline = true,
+        Background = "rbxassetid://137490169052447",
+        BackgroundImageTransparency = 0.7,
+        HideSearchBar = false,
+        OpenButton = {
+            Title = "Open Mizukage UI",
+            CornerRadius = UDim.new(1, 0),
+            StrokeThickness = 3,
+            Enabled = true,
+            Draggable = true,
+            OnlyMobile = false,
+            Color = ColorSequence.new(
+                Color3.fromHex("#00e5ff"),
+                Color3.fromHex("#7c3aed")
+            )
+        }
+    })
 
-PlotManagerTab:CreateButton({
-    Name = "Hapus Plot Dipilih",
-    Callback = function()
-        if selectedPlotToDelete == "(pilih)" then
-            Luna:Notification({ Title = "Pilih plot dulu", Content = "", Icon = "warning", ImageSource = "Material" })
-            return
+    -- =================== TAG VIP ===================
+    Window:Tag({
+        Title = "VIP",
+        Icon = "crown",
+        Color = Color3.fromHex("#ffd700")
+    })
+
+    -- =================== TABS ===================
+    local TabBeranda = Window:Tab({
+        Title = "Dashboard",
+        Icon = "layout-dashboard"
+    })
+
+    local TabAllFarm = Window:Tab({
+        Title = "All Farm",
+        Icon = "rocket"
+    })
+
+    local TabTanaman = Window:Tab({
+        Title = "Tanaman",
+        Icon = "grass"
+    })
+
+    local TabTernak = Window:Tab({
+        Title = "Ternak",
+        Icon = "pets"
+    })
+
+    local TabTP = Window:Tab({
+        Title = "TP Manager",
+        Icon = "map"
+    })
+
+    local TabPlot = Window:Tab({
+        Title = "Plot Manager",
+        Icon = "list"
+    })
+
+    local TabUtil = Window:Tab({
+        Title = "Utilities",
+        Icon = "settings"
+    })
+
+    -- =================== TAB BERANDA ===================
+    local BerandaSection = TabBeranda:Section({
+        Title = "Profil & Keamanan"
+    })
+
+    BerandaSection:Paragraph({
+        Title = "Selamat Datang, " .. LocalPlayer.DisplayName,
+        Desc = "Script Sawah Indo siap digunakan."
+    })
+
+    BerandaSection:Paragraph({
+        Title = "Status Koneksi",
+        Desc = "Auto-Reconnect & Anti-AFK Aktif"
+    })
+
+    local BerandaQuickSection = TabBeranda:Section({
+        Title = "Quick Actions"
+    })
+
+    BerandaQuickSection:Button({
+        Title = "Kill Script (Hancurkan GUI)",
+        Variant = "Secondary",
+        Callback = function()
+            Sounds:Click()
+            getgenv().MizuConfig.IsRunning = false
+            getgenv().MizuApexLoaded = false
+            Window:Destroy()
         end
-        
-        for i, plot in ipairs(SavedPlots.favPlots) do
-            if plot.label == selectedPlotToDelete then
-                table.remove(SavedPlots.favPlots, i)
-                SaveFavPlots(SavedPlots)
-                
-                if G.Mizu_ActivePlot and G.Mizu_ActivePlot.label == selectedPlotToDelete then
-                    G.Mizu_ActivePlot = nil
+    })
+
+    -- =================== TAB ALL FARM ===================
+    local AllFarmSetup = TabAllFarm:Section({ Title = "Setup Koordinat" })
+    AllFarmSetup:Paragraph({ Title = "SETUP KOORDINAT", Desc = "Pergi ke setiap lokasi lalu klik tombol Simpan" })
+
+    AllFarmSetup:Dropdown({
+        Title = "Pilih Tanaman (Phase 1)",
+        Values = CropDropdownList,
+        Value = {CropDropdownList[1] or "Padi [lv.1] 🌾"},
+        Callback = function(choice)
+            Sounds:Click()
+            getgenv().MizuConfig.SelectedCrop = CropKeyMap[choice[1]] or "Padi"
+        end
+    })
+
+    AllFarmSetup:Button({
+        Title = "Simpan Koordinat Tanam",
+        Callback = function()
+            Sounds:Click()
+            if not root then return end
+            getgenv().MizuConfig.PadiPos = root.Position
+            SavedFarmPos.padiPos = root.Position
+            SaveAllFarmPos(SavedFarmPos)
+        end
+    })
+
+    AllFarmSetup:Button({
+        Title = "Simpan Koordinat Sawit",
+        Callback = function()
+            Sounds:Click()
+            if not root then return end
+            getgenv().MizuConfig.SawitPos = root.Position
+            SavedFarmPos.sawitPos = root.Position
+            SaveAllFarmPos(SavedFarmPos)
+        end
+    })
+
+    AllFarmSetup:Button({
+        Title = "Refresh Kandang",
+        Callback = function()
+            Sounds:Click()
+            task.spawn(function()
+                local coop, barn = ScanCoopBarn()
+                if coop then
+                    getgenv().MizuConfig.CoopPos = coop
+                    SavedFarmPos.coopPos = coop
                 end
-                
-                Luna:Notification({ Title = "Dihapus", Content = selectedPlotToDelete, Icon = "check", ImageSource = "Material" })
-                return
-            end
-        end
-    end
-})
-
-PlotManagerTab:CreateDivider()
-PlotManagerTab:CreateParagraph({ Title = "TAMBAH PLOT BARU", Text = "Simpan posisi saat ini sebagai plot" })
-
-local newPlotName = ""
-PlotManagerTab:CreateInput({ Name = "Nama Plot (opsional)", PlaceholderText = "Nama plot...", Callback = function(v) newPlotName = v end })
-
-PlotManagerTab:CreateButton({
-    Name = "Simpan Posisi Sekarang",
-    Callback = function()
-        if not root then
-            Luna:Notification({ Title = "Error", Content = "Karakter belum spawn", Icon = "error", ImageSource = "Material" })
-            return
-        end
-        
-        local name = newPlotName
-        if name == "" then name = "Plot " .. (#SavedPlots.favPlots + 1) end
-        
-        table.insert(SavedPlots.favPlots, { label = name, pos = root.Position })
-        SaveFavPlots(SavedPlots)
-        
-        Luna:Notification({ Title = "Tersimpan", Content = name .. " @ " .. string.format("%.0f,%.0f", root.Position.X, root.Position.Z), Icon = "check", ImageSource = "Material" })
-    end
-})
-
-PlotManagerTab:CreateButton({
-    Name = "Reload dari File",
-    Callback = function()
-        SavedPlots = LoadFavPlots()
-        local newList = { "(pilih plot)" }
-        for _, plot in ipairs(SavedPlots.favPlots) do
-            table.insert(newList, plot.label)
-        end
-        plotDropdown:SetOptions(newList)
-        Luna:Notification({ Title = "Reload", Content = #SavedPlots.favPlots .. " plot dimuat", Icon = "info", ImageSource = "Material" })
-    end
-})
-
--- Utilities Tab
-local UtilTab = Window:CreateTab({ Name = "Utilities", Icon = "settings", ImageSource = "Material", ShowTitle = true })
-
-UtilTab:CreateParagraph({ Title = "UTILITAS", Text = "Pengaturan tambahan" })
-UtilTab:CreateToggle({ Name = "Fast Interact", CurrentValue = G.Mizu_NoDelay, Callback = function(v) G.Mizu_NoDelay = v end })
-UtilTab:CreateToggle({ Name = "Anti AFK", CurrentValue = G.Mizu_AntiAFK, Callback = function(v) G.Mizu_AntiAFK = v; Luna:Notification({ Title = "Anti AFK", Content = v and "Aktif" or "Nonaktif", Icon = v and "check" or "warning", ImageSource = "Material" }) end })
-
-UtilTab:CreateDivider()
-UtilTab:CreateParagraph({ Title = "SESSION TRACKER", Text = "Statistik sesi saat ini" })
-
-local UptimeLabel = UtilTab:CreateParagraph({ Title = "Uptime", Text = "Uptime: 00:00:00" })
-local StatusLabel = UtilTab:CreateParagraph({ Title = "Status", Text = "Status: Idle" })
-local CropLabel = UtilTab:CreateParagraph({ Title = "Crop Aktif", Text = "Crop Aktif: 0 / " .. G.Mizu_MaxCrop })
-local SoldLabel = UtilTab:CreateParagraph({ Title = "Terjual", Text = "Terjual: 0 item" })
-local EarnedLabel = UtilTab:CreateParagraph({ Title = "Earned", Text = "Earned: Rp 0" })
-local TPModeLabel = UtilTab:CreateParagraph({ Title = "TP Mode", Text = "TP Mode: Memory" })
-local AutoTPLabel = UtilTab:CreateParagraph({ Title = "Auto TP", Text = "Auto TP: 60 detik" })
-local AllFarmLabel = UtilTab:CreateParagraph({ Title = "All Farm", Text = "All Farm: IDLE" })
-
-task.spawn(function()
-    local phaseMap = { IDLE = "IDLE", PADI = "Tanam Padi", SAWIT = "Sawit", COOP = "Kandang Ayam", BARN = "Kandang Sapi" }
-    while task.wait(1) do
-        local session = G.Mizu_Session
-        if session then
-            local uptime = os.clock() - session.StartTime
-            local h = math.floor(uptime / 3600)
-            local m = math.floor(uptime % 3600 / 60)
-            local s = math.floor(uptime % 60)
-            
-            local status = "Idle"
-            if G.Mizu_AllFarm then status = "All Farm: " .. (phaseMap[G.Mizu_AllFarmPhase] or "...")
-            elseif G.Mizu_Farm then status = "Farming"
-            elseif G.Mizu_Egg then status = "Collecting Egg"
-            elseif G.Mizu_Milk then status = "Collecting Milk" end
-            
-            local cropCount = CountActiveCrops()
-            local autoTPLeft = math.max(0, 60 - (os.clock() - G.Mizu_LastAutoTp))
-            
-            local tpMode = G.Mizu_TPMode == "Plot" and "Plot Aktif" or "Memory"
-            if G.Mizu_TPMode == "Plot" and not G.Mizu_ActivePlot then tpMode = tpMode .. " (No Plot)"
-            elseif G.Mizu_TPMode == "Memory" and not G.Mizu_MemoryPos then tpMode = tpMode .. " (No Memory)" end
-            
-            pcall(function()
-                UptimeLabel:Set(string.format("Uptime: %02d:%02d:%02d", h, m, s))
-                StatusLabel:Set("Status: " .. status)
-                CropLabel:Set("Crop Aktif: " .. cropCount .. " / " .. G.Mizu_MaxCrop)
-                SoldLabel:Set("Terjual: " .. FormatNumber(session.TotalSold) .. " item")
-                EarnedLabel:Set("Earned: Rp " .. FormatNumber(session.TotalEarned))
-                TPModeLabel:Set("TP Mode: " .. tpMode)
-                AutoTPLabel:Set(string.format("Auto TP: %d detik", math.floor(autoTPLeft)))
-                AllFarmLabel:Set("All Farm: " .. (phaseMap[G.Mizu_AllFarmPhase or "IDLE"] or G.Mizu_AllFarmPhase))
+                if barn then
+                    getgenv().MizuConfig.BarnPos = barn
+                    SavedFarmPos.barnPos = barn
+                end
+                SaveAllFarmPos(SavedFarmPos)
             end)
         end
+    })
+
+    local AllFarmControl = TabAllFarm:Section({ Title = "Kontrol All Farm" })
+
+    AllFarmControl:Toggle({
+        Title = "AUTO FARM ALL",
+        Default = false,
+        Callback = function(state)
+            Sounds:Click()
+            local cfg = getgenv().MizuConfig
+            cfg.AllFarm = state
+            cfg.Farm = false
+            cfg.Egg = false
+            cfg.Milk = false
+            if state and not cfg.PadiPos then
+                cfg.AllFarm = false
+            end
+        end
+    })
+
+    AllFarmControl:Button({
+        Title = "Jual Semua Sekarang",
+        Callback = function()
+            Sounds:Click()
+            task.spawn(SellAll)
+        end
+    })
+
+    -- =================== TAB TANAMAN ===================
+    local TanamanConfig = TabTanaman:Section({ Title = "Konfigurasi Tanaman" })
+
+    TanamanConfig:Dropdown({
+        Title = "Target Tanaman",
+        Values = CropDropdownList,
+        Value = {CropDropdownList[1] or "Padi [lv.1] 🌾"},
+        Callback = function(choice)
+            Sounds:Click()
+            getgenv().MizuConfig.SelectedCrop = CropKeyMap[choice[1]] or "Padi"
+        end
+    })
+
+    TanamanConfig:Input({
+        Title = "Maks Bibit di Tas",
+        Value = "15",
+        Callback = function(v) getgenv().MizuConfig.PlantAmount = tonumber(v) or 15 end
+    })
+
+    TanamanConfig:Input({
+        Title = "Max Crop Aktif",
+        Value = "15",
+        Callback = function(v) getgenv().MizuConfig.MaxCrop = tonumber(v) or 15 end
+    })
+
+    TanamanConfig:Input({
+        Title = "Seed per Burst",
+        Value = "5",
+        Callback = function(v) getgenv().MizuConfig.BurstAmount = tonumber(v) or 5 end
+    })
+
+    TanamanConfig:Input({
+        Title = "Auto Sell Delay",
+        Value = "60",
+        Callback = function(v) getgenv().MizuConfig.SellDelay = math.floor(tonumber(v) or 60) end
+    })
+
+    local TanamanControl = TabTanaman:Section({ Title = "Kontrol Tanaman" })
+
+    TanamanControl:Toggle({
+        Title = "Auto Farm Tanaman",
+        Default = false,
+        Callback = function(state)
+            Sounds:Click()
+            local cfg = getgenv().MizuConfig
+            cfg.Farm = state
+            if state and cfg.AllFarm then
+                cfg.Farm = false
+                return
+            end
+            if state then
+                SaveMemoryPosition()
+                StartPlantLoop("Farm", cfg.SelectedCrop, GetTeleportPosition())
+                StartHarvestLoop("Farm")
+                StartSellLoop("Farm")
+                StartAutoTP("Farm")
+            end
+        end
+    })
+
+    TanamanControl:Toggle({ Title = "Auto Beli Bibit", Default = false, Callback = function(v) getgenv().MizuConfig.AutoBuy = v end })
+    TanamanControl:Toggle({ Title = "Auto Jual Tanaman", Default = true, Callback = function(v) getgenv().MizuConfig.Selling = v end })
+    TanamanControl:Button({ Title = "Jual Tanaman Sekarang", Callback = function() Sounds:Click(); task.spawn(function() SellCrop(getgenv().MizuConfig.SelectedCrop) end) end })
+
+    -- =================== TAB TERNAK ===================
+    local TernakEgg = TabTernak:Section({ Title = "Auto Egg" })
+    TernakEgg:Toggle({
+        Title = "Auto Collect Telur",
+        Default = false,
+        Callback = function(state)
+            Sounds:Click()
+            local cfg = getgenv().MizuConfig
+            cfg.Egg = state
+            if state and cfg.AllFarm then cfg.Egg = false; return end
+            if state then StartEggLoop("Egg") end
+        end
+    })
+    TernakEgg:Toggle({ Title = "Auto Jual Telur", Default = false, Callback = function(v) getgenv().MizuConfig.SellEgg = v end })
+    TernakEgg:Button({ Title = "Jual Telur Sekarang", Callback = function() Sounds:Click(); task.spawn(function() TutorialRemotes.RequestSell:InvokeServer("GET_EGG_LIST") end) end })
+
+    local TernakMilk = TabTernak:Section({ Title = "Auto Milk" })
+    TernakMilk:Toggle({
+        Title = "Auto Collect Susu",
+        Default = false,
+        Callback = function(state)
+            Sounds:Click()
+            local cfg = getgenv().MizuConfig
+            cfg.Milk = state
+            if state and cfg.AllFarm then cfg.Milk = false; return end
+            if state then StartMilkLoop("Milk") end
+        end
+    })
+    TernakMilk:Toggle({ Title = "Auto Jual Susu", Default = false, Callback = function(v) getgenv().MizuConfig.SellMilk = v end })
+    TernakMilk:Button({ Title = "Jual Susu Sekarang", Callback = function() Sounds:Click(); task.spawn(function() TutorialRemotes.RequestSell:InvokeServer("GET_MILK_LIST") end) end })
+
+    local TernakFruit = TabTernak:Section({ Title = "Auto Fruit" })
+    TernakFruit:Toggle({ Title = "Auto Jual Buah", Default = false, Callback = function(v) getgenv().MizuConfig.SellFruit = v end })
+    TernakFruit:Button({ Title = "Jual Buah Sekarang", Callback = function() Sounds:Click(); task.spawn(function() TutorialRemotes.RequestSell:InvokeServer("GET_FRUIT_LIST") end) end })
+
+    -- =================== TAB TP MANAGER ===================
+    local TPMode = TabTP:Section({ Title = "Mode Auto TP" })
+    TPMode:Toggle({
+        Title = "Smart Memory TP",
+        Default = true,
+        Callback = function(state)
+            Sounds:Click()
+            getgenv().MizuConfig.TPMode = state and "Memory" or "Plot"
+            if state and not getgenv().MizuConfig.MemoryPos then SaveMemoryPosition() end
+        end
+    })
+
+    local TPPlot = TabTP:Section({ Title = "Plot Aktif" })
+    local plotList = { "(pilih plot)" }
+    for _, plot in ipairs(SavedPlots.favPlots) do
+        table.insert(plotList, plot.label)
     end
-end)
+    TPPlot:Dropdown({
+        Title = "Pilih Plot Aktif",
+        Values = plotList,
+        Value = {"(pilih plot)"},
+        Callback = function(choice)
+            Sounds:Click()
+            if choice[1] == "(pilih plot)" then
+                getgenv().MizuConfig.ActivePlot = nil
+                return
+            end
+            for _, plot in ipairs(SavedPlots.favPlots) do
+                if plot.label == choice[1] then
+                    getgenv().MizuConfig.ActivePlot = plot
+                    TeleportTo(plot.pos)
+                    getgenv().MizuConfig.LastAutoTp = os.clock()
+                    break
+                end
+            end
+        end
+    })
 
-UtilTab:CreateButton({
-    Name = "Reset Statistik",
-    Callback = function()
-        G.Mizu_Session = { StartTime = os.clock(), TotalSold = 0, TotalEarned = 0 }
-        G.Mizu_MyPlots = {}
-        Luna:Notification({ Title = "Reset", Content = "Statistik direset", Icon = "check", ImageSource = "Material" })
-    end
-})
+    local TPMem = TabTP:Section({ Title = "Memory Position" })
+    TPMem:Button({
+        Title = "Update Memory Position",
+        Callback = function()
+            Sounds:Click()
+            SaveMemoryPosition()
+        end
+    })
+    TPMem:Button({
+        Title = "TP ke Memory Position",
+        Callback = function()
+            Sounds:Click()
+            if getgenv().MizuConfig.MemoryPos then
+                TeleportTo(getgenv().MizuConfig.MemoryPos.pos)
+            end
+        end
+    })
 
--- Theme Tab (WAJIB)
-local ThemeTab = Window:CreateTab({ Name = "Theme", Icon = "palette", ImageSource = "Material", ShowTitle = true })
-ThemeTab:BuildThemeSection()
+    -- =================== TAB PLOT MANAGER ===================
+    local PlotDel = TabPlot:Section({ Title = "Hapus Plot" })
+    PlotDel:Dropdown({
+        Title = "Pilih Plot untuk Dihapus",
+        Values = plotList,
+        Value = {"(pilih plot)"},
+        Callback = function() end
+    })
+    PlotDel:Button({
+        Title = "Hapus Plot Dipilih",
+        Callback = function()
+            Sounds:Click()
+        end
+    })
 
--- Config Tab (WAJIB)
-local ConfigTabWindow = Window:CreateTab({ Name = "Config", Icon = "settings", ImageSource = "Material", ShowTitle = true })
-ConfigTabWindow:BuildConfigSection()
-ConfigTabWindow:CreateButton({
-    Name = "Shutdown Script",
-    Callback = function()
-        getgenv().MizuConfig = getgenv().MizuConfig or { IsRunning = true }
-        getgenv().MizuConfig.IsRunning = false
-        Luna:Destroy()
-    end
-})
+    local PlotAdd = TabPlot:Section({ Title = "Tambah Plot Baru" })
+    PlotAdd:Input({ Title = "Nama Plot (opsional)", Value = "", Placeholder = "Nama plot...", Callback = function() end })
+    PlotAdd:Button({
+        Title = "Simpan Posisi Sekarang",
+        Callback = function()
+            Sounds:Click()
+            if not root then return end
+            local name = "Plot " .. (#SavedPlots.favPlots + 1)
+            table.insert(SavedPlots.favPlots, { label = name, pos = root.Position })
+            SaveFavPlots(SavedPlots)
+        end
+    })
 
--- ============================================
--- INITIALIZATION
--- ============================================
+    -- =================== TAB UTILITIES ===================
+    local UtilMain = TabUtil:Section({ Title = "Utilitas" })
+    UtilMain:Toggle({ Title = "Fast Interact", Default = false, Callback = function(v) getgenv().MizuConfig.NoDelay = v end })
+    UtilMain:Toggle({ Title = "Anti AFK", Default = false, Callback = function(v) getgenv().MizuConfig.AntiAFK = v end })
+    UtilMain:Button({
+        Title = "Reset Statistik",
+        Callback = function()
+            Sounds:Click()
+            getgenv().MizuConfig.Session = { StartTime = os.clock(), TotalSold = 0, TotalEarned = 0 }
+            getgenv().MizuConfig.MyPlots = {}
+        end
+    })
+
+    WindUI:Notify({
+        Title = "TeamMizu🔰 dimari",
+        Content = "Script Sawah Indo berhasil di-inject!",
+        Duration = 5
+    })
+end
+
+--================================================
+-- 6. BOOTSTRAP EKSEKUSI
+--================================================
+SetupAutoReconnect()
 SetupPromptCache()
 SetupEventConnections()
 SetupConfirmClicker()
 
 task.spawn(function()
     task.wait(2)
-    if not G.Mizu_MemoryPos then SaveMemoryPosition() end
+    if not getgenv().MizuConfig.MemoryPos then SaveMemoryPosition() end
 end)
 
-Luna:Notification({
-    Title = "Mizukage System",
-    Content = "Sawah Indo loaded! " .. #CropList .. " tanaman siap",
-    Icon = "verified",
-    ImageSource = "Material"
-})
+-- Panggil fungsi-fungsi core barumu di sini
+StartAutoFarm()
+
+-- Eksekusi UI
+task.spawn(InitInterface)
